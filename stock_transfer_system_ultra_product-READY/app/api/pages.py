@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
@@ -12,32 +12,42 @@ templates = Jinja2Templates(directory="app/templates")
 
 def t(lang, key):
     en = {
-        "Dashboard":"Dashboard","Stores":"Stores","SKUs":"SKUs","Sales Records":"Sales Records",
-        "Welcome":"Welcome","WelcomeBody":"Delightful stock transfer planning for every client."
+        "Dashboard": "Dashboard", "Stores": "Stores", "SKUs": "SKUs", "Sales Records": "Sales Records",
+        "Welcome": "Welcome", "WelcomeBody": "Delightful stock transfer planning for every client."
     }
     ur = {
-        "Dashboard":"ڈیش بورڈ","Stores":"اسٹورز","SKUs":"اشیاء","Sales Records":"سیلز ریکارڈز",
-        "Welcome":"خوش آمدید","WelcomeBody":"ہر کلائنٹ کے لیے آسان اور شاندار اسٹاک ٹرانسفر پلاننگ۔"
+        "Dashboard": "ڈیش بورڈ", "Stores": "اسٹورز", "SKUs": "اشیاء", "Sales Records": "سیلز ریکارڈز",
+        "Welcome": "خوش آمدید", "WelcomeBody": "ہر کلائنٹ کے لیے آسان اور شاندار اسٹاک ٹرانسفر پلاننگ۔"
     }
-    d = ur if lang=="ur" else en
+    d = ur if lang == "ur" else en
     return d.get(key, key)
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request, lang: str = "en", db: Session = get_db().__next__()):
+def home(request: Request, lang: str = "en", db: Session = Depends(get_db)):
     user = current_user(request, db)
-    if not user: return RedirectResponse("/login", status_code=302)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
 
-    engine = db.get_bind(); insp = inspect(engine)
-    def exists(name): 
-        try: return insp.has_table(name)
-        except: return False
+    engine = db.get_bind()
+    insp = inspect(engine)
+
+    def exists(name):
+        try:
+            return insp.has_table(name)
+        except:
+            return False
+
     stores_df = pd.read_sql_table("stores", con=engine) if exists("stores") else pd.DataFrame()
-    items_df  = pd.read_sql_table("items", con=engine) if exists("items") else pd.DataFrame()
-    sales_df  = pd.read_sql_table("sales", con=engine) if exists("sales") else pd.DataFrame()
+    items_df = pd.read_sql_table("items", con=engine) if exists("items") else pd.DataFrame()
+    sales_df = pd.read_sql_table("sales", con=engine) if exists("sales") else pd.DataFrame()
 
-    stats = {"stores": len(stores_df[stores_df.get("org_id",0)==user.org_id]) if not stores_df.empty else 0,
-             "skus": items_df[items_df.get("org_id",0)==user.org_id]["sku"].nunique() if not items_df.empty else 0,
-             "records": len(sales_df[sales_df.get("org_id",0)==user.org_id]) if not sales_df.empty else 0}
+    stats = {
+        "stores": len(stores_df[stores_df.get("org_id", 0) == user.org_id]) if not stores_df.empty else 0,
+        "skus": items_df[items_df.get("org_id", 0) == user.org_id]["sku"].nunique() if not items_df.empty else 0,
+        "records": len(sales_df[sales_df.get("org_id", 0) == user.org_id]) if not sales_df.empty else 0
+    }
 
-    return templates.TemplateResponse("dashboard.html", {"request": request, "year": datetime.now().year,
-        "stats": stats, "lookback": 7, "lang": lang, "t": t})
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, "year": datetime.now().year,
+        "stats": stats, "lookback": 7, "lang": lang, "t": t
+    })

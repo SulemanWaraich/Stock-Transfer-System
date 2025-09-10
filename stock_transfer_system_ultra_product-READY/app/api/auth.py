@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
@@ -15,7 +15,10 @@ def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
 @router.post("/login")
-async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = get_db().__next__()):
+async def login(request: Request, 
+email: str = Form(...), 
+password: str = Form(...),
+db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email==email).first()
     if user and verify_password(password, user.hashed_password):
         request.session["user_email"] = user.email

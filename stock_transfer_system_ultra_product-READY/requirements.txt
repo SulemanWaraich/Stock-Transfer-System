@@ -11,3 +11,5 @@ python-jose==3.3.0
 pandas==2.2.2
 openpyxl==3.1.5
 requests==2.32.3
+itsdangerous
+bcrypt==3.2.2

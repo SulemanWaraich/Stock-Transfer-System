@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   db:
     image: postgres:16
@@ -13,7 +12,6 @@ services:
 
   app:
     build: .
-    env_file: .env.example
     environment:
       DATABASE_URL: postgresql+psycopg2://appuser:applongpass@db:5432/stockdb
     depends_on:
