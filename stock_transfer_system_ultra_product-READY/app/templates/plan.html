@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Transfer Plan</h1>
+<form method="get" class="mb-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow space-x-2">
+  <label>Lookback days <input class="border rounded p-1 w-20 dark:bg-slate-700" type="number" name="lookback" value="{{ lookback or 7 }}"></label>
+  <button class="bg-slate-800 text-white px-3 py-1 rounded">Generate</button>
+  {% if export_path %}
+    <a class="ml-3 text-blue-700 underline" href="{{ export_path }}">Download Excel Export</a>
+    <a class="ml-3 text-blue-700 underline" href="{{ csv_pick }}">Pick CSV</a>
+    <a class="ml-3 text-blue-700 underline" href="{{ csv_recv }}">Receive CSV</a>
+  {% endif %}
+</form>
+
+<input id="search" placeholder="Search SKU/Store..." class="mb-3 border rounded p-2 w-full dark:bg-slate-700" oninput="filterTable()"/>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow overflow-auto">
+    <h2 class="font-semibold mb-2">Plan</h2>
+    <table id="planTable" class="min-w-full text-sm">
+      <thead><tr class="text-left"><th>From</th><th>To</th><th>SKU</th><th>Style</th><th>Size</th><th>Qty</th></tr></thead>
+      <tbody>
+        {% for r in plan %}
+        <tr class="border-t">
+          <td>{{ r.from_store_id }} — {{ r.from_store }}</td>
+          <td>{{ r.to_store_id }} — {{ r.to_store }}</td>
+          <td>{{ r.sku }}</td><td>{{ r.style }}</td><td>{{ r.size }}</td><td>{{ r.qty }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow overflow-auto">
+    <h2 class="font-semibold mb-2">KPIs (top 20)</h2>
+    <table class="min-w-full text-sm">
+      <thead><tr class="text-left"><th>Store</th><th>SKU</th><th>Size</th><th>OnHand Before</th><th>Days Before</th><th>OnHand After</th><th>Days After</th></tr></thead>
+      <tbody>
+        {% for k in kpis %}
+        <tr class="border-t">
+          <td>{{ k.store_name }}</td>
+          <td>{{ k.sku }}</td>
+          <td>{{ k.size }}</td>
+          <td>{{ k.on_hand_before }}</td>
+          <td>{{ "%.2f"|format(k.days_cover_before) }}</td>
+          <td>{{ k.on_hand_after }}</td>
+          <td>{{ "%.2f"|format(k.days_cover_after) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterTable(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const rows = document.querySelectorAll('#planTable tbody tr');
+  rows.forEach(r => {
+    const text = r.innerText.toLowerCase();
+    r.style.display = text.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

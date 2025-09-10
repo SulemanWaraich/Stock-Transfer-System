@@ -1,0 +1,6 @@
+store_id,store_name,sku,style,size,on_hand
+S1,Downtown,ST-001,Tee Alpha,M,2
+S2,Airport,ST-001,Tee Alpha,M,15
+S2,Airport,ST-001,Tee Alpha,L,10
+S3,Mall,ST-001,Tee Alpha,M,8
+S3,Mall,ST-001,Tee Alpha,L,6

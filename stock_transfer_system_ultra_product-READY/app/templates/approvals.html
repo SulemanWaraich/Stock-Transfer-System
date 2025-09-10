@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Approvals</h1>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow overflow-auto">
+  <table class="min-w-full text-sm">
+    <thead><tr class="text-left"><th>ID</th><th>Status</th><th>Lookback</th><th>Created</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for p in plans %}
+      <tr class="border-t">
+        <td>#{{ p.id }}</td>
+        <td>{{ p.status }}</td>
+        <td>{{ p.lookback_days }}</td>
+        <td>{{ p.created_at }}</td>
+        <td><a class="text-blue-700 underline" href="/plan/{{ p.id }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

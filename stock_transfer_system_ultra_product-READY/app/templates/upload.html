@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Upload Data</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+    <h2 class="font-semibold mb-2">Upload CSV Files</h2>
+    <form method="post" action="/upload/csv" enctype="multipart/form-data" class="space-y-3">
+      <label class="block">Sales CSV <input type="file" name="sales"></label>
+      <label class="block">Stock CSV <input type="file" name="stock"></label>
+      <label class="block">Items CSV <input type="file" name="items"></label>
+      <label class="block">Stores CSV <input type="file" name="stores"></label>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded">Upload CSVs</button>
+    </form>
+  </div>
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow">
+    <h2 class="font-semibold mb-2">Upload Excel Workbook</h2>
+    <form method="post" action="/upload/excel" enctype="multipart/form-data" class="space-y-3">
+      <label class="block">Excel (.xlsx) <input type="file" name="excel"></label>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded">Upload Excel</button>
+    </form>
+  </div>
+</div>
+
+<div class="mt-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow flex items-center justify-between">
+  <div>
+    <h2 class="font-semibold mb-1">No data? Try demo data</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400">One click loads sample stores, items, sales and stock.</p>
+  </div>
+  <form method="post" action="/upload/demo">
+    <button class="bg-emerald-600 text-white px-4 py-2 rounded">Load Demo</button>
+  </form>
+</div>
+{% endblock %}

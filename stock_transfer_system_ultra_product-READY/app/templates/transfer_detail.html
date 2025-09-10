@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Plan #{{ plan.id }} — {{ plan.status }}</h1>
+<div class="mb-4 space-x-2">
+  <form method="post" action="/plan/{{ plan.id }}/submit" style="display:inline"><button class="bg-yellow-600 text-white px-3 py-1 rounded">Submit</button></form>
+  <form method="post" action="/plan/{{ plan.id }}/approve" style="display:inline"><button class="bg-green-600 text-white px-3 py-1 rounded">Approve</button></form>
+  <form method="post" action="/plan/{{ plan.id }}/reject" style="display:inline"><button class="bg-red-600 text-white px-3 py-1 rounded">Reject</button></form>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow overflow-auto">
+    <h2 class="font-semibold mb-2">Lines</h2>
+    <table class="min-w-full text-sm">
+      <thead><tr class="text-left"><th>From</th><th>To</th><th>SKU</th><th>Style</th><th>Size</th><th>Qty</th></tr></thead>
+      <tbody>
+      {% for r in items %}
+      <tr class="border-t">
+        <td>{{ r.from_store_id }} — {{ r.from_store }}</td>
+        <td>{{ r.to_store_id }} — {{ r.to_store }}</td>
+        <td>{{ r.sku }}</td><td>{{ r.style }}</td><td>{{ r.size }}</td><td>{{ r.qty }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow overflow-auto">
+    <h2 class="font-semibold mb-2">Comments</h2>
+    <form method="post" action="/plan/{{ plan.id }}/comment" class="mb-2 flex gap-2">
+      <input name="comment" class="flex-1 border rounded p-2 dark:bg-slate-700" placeholder="Add a comment..."/>
+      <button class="bg-slate-900 text-white px-3 py-1 rounded">Post</button>
+    </form>
+    <ul class="space-y-2">
+      {% for c in comments %}
+        <li class="p-2 border dark:border-slate-700 rounded"><span class="font-semibold">{{ c.user_email }}</span>: {{ c.comment }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Users</h1>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow mb-6">
+  <form method="post" action="/admin/users/create" class="grid grid-cols-1 md:grid-cols-5 gap-2">
+    <input name="email" placeholder="email" class="border rounded p-2 dark:bg-slate-700"/>
+    <input name="name" placeholder="name" class="border rounded p-2 dark:bg-slate-700"/>
+    <select name="role" class="border rounded p-2 dark:bg-slate-700">
+      <option>Admin</option><option>Planner</option><option>Approver</option><option>StoreManager</option><option>Viewer</option>
+    </select>
+    <input type="password" name="password" placeholder="password" class="border rounded p-2 dark:bg-slate-700"/>
+    <button class="bg-blue-600 text-white px-4 py-2 rounded">Create</button>
+  </form>
+</div>
+{% endblock %}

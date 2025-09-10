@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ title or "Stock Transfer Ultra" }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Theme toggle with localStorage
+    const themeInit = () => {
+      const saved = localStorage.getItem('theme') || 'light';
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+    };
+    document.addEventListener('DOMContentLoaded', themeInit);
+    function toggleTheme(){
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    }
+  </script>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+  <nav class="bg-white dark:bg-slate-800 shadow sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold">⚡ Stock Transfer Ultra</a>
+      <div class="space-x-4 flex items-center">
+        <a class="hover:underline" href="/upload">Upload</a>
+        <a class="hover:underline" href="/rules">Rules</a>
+        <a class="hover:underline" href="/plan">Plan</a>
+        <a class="hover:underline" href="/approvals">Approvals</a>
+        <a class="hover:underline" href="/admin/users">Users</a>
+        <button onclick="toggleTheme()" class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-700">Theme</button>
+        <a class="hover:underline" href="/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+  <main class="max-w-7xl mx-auto p-6">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="max-w-7xl mx-auto p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+    © {{ 2025 }} Stock Transfer Ultra
+    · <a class="underline" href="/?lang=en">EN</a> | <a class="underline" href="/?lang=ur">UR</a>
+  </footer>
+</body>
+</html>

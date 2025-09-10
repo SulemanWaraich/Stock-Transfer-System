@@ -1,0 +1,7 @@
+date,store_id,store_name,sku,style,size,units_sold
+2025-08-20,S1,Downtown,ST-001,Tee Alpha,M,5
+2025-08-21,S1,Downtown,ST-001,Tee Alpha,M,3
+2025-08-22,S2,Airport,ST-001,Tee Alpha,M,1
+2025-08-22,S2,Airport,ST-001,Tee Alpha,L,0
+2025-08-23,S3,Mall,ST-001,Tee Alpha,M,0
+2025-08-23,S3,Mall,ST-001,Tee Alpha,L,0
