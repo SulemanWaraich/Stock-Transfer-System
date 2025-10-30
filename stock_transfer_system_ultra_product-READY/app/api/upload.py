@@ -10,83 +10,195 @@ from app.models.inventory import Sale, Stock, Item, Store
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+
 @router.get("/upload", response_class=HTMLResponse)
-def upload_page(request: Request, db: Session = Depends(get_db)):
-    user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
+async def upload_page(
+    request: Request,
+    user=Depends(require_role(["Admin", "Planner"]))
+):
+    """
+    ✅ Render upload page for Excel or CSV uploads.
+    """
     return templates.TemplateResponse("upload.html", {"request": request, "year": 2025})
 
-@router.post("/upload/csv")
-async def upload_csv(request: Request,
-                     sales: UploadFile = None,
-                     stock: UploadFile = None,
-                     items: UploadFile = None,
-                     stores: UploadFile = None,
-                     db: Session = Depends(get_db)):
-    user = current_user(request, db)
-    require_role(user, ["Admin", "Planner"])
-    if sales:
-        df = pd.read_csv(io.BytesIO(await sales.read()))
-        for _, r in df.iterrows():
-            db.add(Sale(org_id=user.org_id,
-                        date=pd.to_datetime(r["date"]).date(),
-                        store_id=str(r["store_id"]), store_name=str(r["store_name"]),
-                        sku=str(r["sku"]), style=str(r["style"]), size=str(r["size"]),
-                        units_sold=int(r["units_sold"])))
-    if stock:
-        df = pd.read_csv(io.BytesIO(await stock.read()))
-        for _, r in df.iterrows():
-            db.add(Stock(org_id=user.org_id,
-                         store_id=str(r["store_id"]), store_name=str(r["store_name"]),
-                         sku=str(r["sku"]), style=str(r["style"]), size=str(r["size"]),
-                         on_hand=int(r["on_hand"])))
-    if items:
-        df = pd.read_csv(io.BytesIO(await items.read()))
-        for _, r in df.iterrows():
-            db.add(Item(org_id=user.org_id,
-                        sku=str(r["sku"]), style=str(r["style"]), size=str(r["size"]),
-                        category=str(r.get("category", ""))))
-    if stores:
-        df = pd.read_csv(io.BytesIO(await stores.read()))
-        for _, r in df.iterrows():
-            db.add(Store(org_id=user.org_id,
-                         store_id=str(r["store_id"]), store_name=str(r["store_name"]),
-                         priority=int(r.get("priority", 1))))
-    db.commit()
-    return RedirectResponse("/upload", status_code=302)
 
-@router.post("/upload/demo")
-def upload_demo(request: Request, db: Session = Depends(get_db)):
-    user = current_user(request, db)
-    require_role(user, ["Admin", "Planner"])
-    import os
-    base = "sample_data"
-    for name, model in [("Sales.csv", "sales"), ("Stock.csv", "stock"), ("Items.csv", "items"), ("Stores.csv", "stores")]:
-        path = os.path.join(base, name)
-        df = pd.read_csv(path)
-        if model == "sales":
+# ========================================================
+# ✅ EXCEL UPLOAD ROUTE (engine fix + UPSERT logic)
+# ========================================================
+
+@router.post("/upload/excel")
+async def upload_excel(
+    request: Request,
+    excel: UploadFile = None,
+    db: Session = Depends(get_db),
+    user=Depends(require_role(["Admin", "Planner"]))
+):
+    """
+    ✅ Handles Excel uploads for 3 sheets: Stores, Items, Sales.
+    ✅ Fixes:
+        1. Added engine="openpyxl" for Excel parsing.
+        2. Added UPSERT logic to avoid duplicate key errors.
+    """
+
+    if not excel:
+        return RedirectResponse("/upload", status_code=302)
+
+    try:
+        excel_data = await excel.read()
+        xl_file = pd.ExcelFile(io.BytesIO(excel_data), engine="openpyxl")
+
+        # --------------- STORES SHEET ---------------
+        if "Stores" in xl_file.sheet_names:
+            df = pd.read_excel(xl_file, sheet_name="Stores", engine="openpyxl")
             for _, r in df.iterrows():
-                db.add(Sale(org_id=user.org_id,
-                            date=pd.to_datetime(r["date"]).date(),
-                            store_id=r["store_id"], store_name=r["store_name"],
-                            sku=r["sku"], style=r["style"], size=r["size"],
-                            units_sold=int(r["units_sold"])))
-        elif model == "stock":
+                existing = db.query(Store).filter_by(
+                    org_id=user.org_id, store_id=str(r["store_id"])
+                ).first()
+
+                if not existing:
+                    db.add(Store(
+                        org_id=user.org_id,
+                        store_id=str(r["store_id"]),
+                        store_name=str(r["store_name"]),
+                        priority=int(r.get("priority", 1))
+                    ))
+                else:
+                    existing.store_name = str(r["store_name"])
+                    existing.priority = int(r.get("priority", 1))
+
+        # --------------- ITEMS SHEET ---------------
+        if "Items" in xl_file.sheet_names:
+            df = pd.read_excel(xl_file, sheet_name="Items", engine="openpyxl")
             for _, r in df.iterrows():
-                db.add(Stock(org_id=user.org_id,
-                             store_id=r["store_id"], store_name=r["store_name"],
-                             sku=r["sku"], style=r["style"], size=r["size"],
-                             on_hand=int(r["on_hand"])))
-        elif model == "items":
+                existing = db.query(Item).filter_by(
+                    org_id=user.org_id, item_id=str(r["item_id"])
+                ).first()
+
+                if not existing:
+                    db.add(Item(
+                        org_id=user.org_id,
+                        item_id=str(r["item_id"]),
+                        item_name=str(r["item_name"]),
+                        price=float(r.get("price", 0.0))
+                    ))
+                else:
+                    existing.item_name = str(r["item_name"])
+                    existing.price = float(r.get("price", 0.0))
+
+        # --------------- SALES SHEET ---------------
+        if "Sales" in xl_file.sheet_names:
+            df = pd.read_excel(xl_file, sheet_name="Sales", engine="openpyxl")
+
+            if "date" not in df.columns:
+                raise ValueError("Missing required 'date' column in Sales sheet")
+
             for _, r in df.iterrows():
-                db.add(Item(org_id=user.org_id,
-                            sku=r["sku"], style=r["style"], size=r["size"],
-                            category=r["category"]))
+                db.add(Sale(
+                    org_id=user.org_id,
+                    store_id=str(r["store_id"]),
+                    item_id=str(r["item_id"]),
+                    quantity=int(r["quantity"]),
+                    date=pd.to_datetime(r["date"]).date()
+                ))
+
+        db.commit()
+        return RedirectResponse("/upload", status_code=302)
+
+    except Exception as e:
+        db.rollback()
+        print(f"Excel Upload Error: {e}")
+        return templates.TemplateResponse("upload.html", {
+            "request": request,
+            "year": 2025,
+            "error": f"Excel upload failed: {str(e)}"
+        })
+
+
+# ========================================================
+# ✅ CSV UPLOAD ROUTE (UPSERT logic + validation)
+# ========================================================
+
+@router.post("/upload/csv")
+async def upload_csv(
+    request: Request,
+    csv: UploadFile = None,
+    db: Session = Depends(get_db),
+    user=Depends(require_role(["Admin", "Planner"]))
+):
+    """
+    ✅ Handles CSV uploads (Sales, Stores, Items).
+    ✅ Fixes:
+        1. UPSERT logic (no duplicate key crash)
+        2. Validations for missing columns
+    """
+
+    if not csv:
+        return RedirectResponse("/upload", status_code=302)
+
+    try:
+        content = await csv.read()
+        decoded = content.decode("utf-8")
+        df = pd.read_csv(io.StringIO(decoded))
+        cols = set(df.columns)
+
+        # --------------- STORES CSV ---------------
+        if {"store_id", "store_name"}.issubset(cols):
+            for _, r in df.iterrows():
+                existing = db.query(Store).filter_by(
+                    org_id=user.org_id, store_id=str(r["store_id"])
+                ).first()
+
+                if not existing:
+                    db.add(Store(
+                        org_id=user.org_id,
+                        store_id=str(r["store_id"]),
+                        store_name=str(r["store_name"]),
+                        priority=int(r.get("priority", 1))
+                    ))
+                else:
+                    existing.store_name = str(r["store_name"])
+                    existing.priority = int(r.get("priority", 1))
+
+        # --------------- ITEMS CSV ---------------
+        elif {"item_id", "item_name"}.issubset(cols):
+            for _, r in df.iterrows():
+                existing = db.query(Item).filter_by(
+                    org_id=user.org_id, item_id=str(r["item_id"])
+                ).first()
+
+                if not existing:
+                    db.add(Item(
+                        org_id=user.org_id,
+                        item_id=str(r["item_id"]),
+                        item_name=str(r["item_name"]),
+                        price=float(r.get("price", 0.0))
+                    ))
+                else:
+                    existing.item_name = str(r["item_name"])
+                    existing.price = float(r.get("price", 0.0))
+
+        # --------------- SALES CSV ---------------
+        elif {"store_id", "item_id", "quantity", "date"}.issubset(cols):
+            for _, r in df.iterrows():
+                db.add(Sale(
+                    org_id=user.org_id,
+                    store_id=str(r["store_id"]),
+                    item_id=str(r["item_id"]),
+                    quantity=int(r["quantity"]),
+                    date=pd.to_datetime(r["date"]).date()
+                ))
+
         else:
-            for _, r in df.iterrows():
-                db.add(Store(org_id=user.org_id,
-                             store_id=r["store_id"], store_name=r["store_name"],
-                             priority=int(r["priority"])))
-    db.commit()
-    return RedirectResponse("/upload", status_code=302)
+            raise ValueError("Unsupported CSV format or missing required columns")
+
+        db.commit()
+        return RedirectResponse("/upload", status_code=302)
+
+    except Exception as e:
+        db.rollback()
+        print(f"CSV Upload Error: {e}")
+        return templates.TemplateResponse("upload.html", {
+            "request": request,
+            "year": 2025,
+            "error": f"CSV upload failed: {str(e)}"
+        })
