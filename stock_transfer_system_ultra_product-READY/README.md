@@ -11,8 +11,8 @@ Polished, delightful, and client-ready:
 - Docker Compose + Postgres
 
 ## Run
-```bash
+\`\`\`bash
 docker compose up --build -d
 open http://localhost:8000
 # login: admin@example.com / admin123
-```
+\`\`\`
